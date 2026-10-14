@@ -1,0 +1,15 @@
+config {
+  type: "view",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "stg_restaurants"
+}
+
+SELECT
+  TRIM(CAST(restaurant_id AS STRING)) AS restaurant_id,
+  TRIM(CAST(name AS STRING)) AS restaurant_name,
+  TRIM(CAST(city AS STRING)) AS city,
+  TRIM(CAST(cuisine AS STRING)) AS cuisine,
+  CAST(is_active AS BOOLEAN) AS is_active,
+  CAST(onboarded_date AS DATE) AS onboarded_date,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
+FROM ${ref(dataform.projectConfig.vars.raw_dataset, "restaurants")}

@@ -1,0 +1,29 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.marts_dataset,
+  name: "mart_customer_summary"
+}
+
+WITH customer_orders AS (
+  SELECT
+    o.customer_id,
+    COUNT(o.order_id) AS delivered_orders,
+    SUM(i.line_item_revenue) AS total_spend,
+    MIN(o.order_date) AS first_order_date,
+    MAX(o.order_date) AS last_order_date
+  FROM ${ref("fct_orders")} o
+  JOIN ${ref("fct_order_items")} i ON o.order_id = i.order_id
+  WHERE o.status = 'delivered'
+  GROUP BY 1
+)
+
+SELECT
+  c.customer_id,
+  c.current_city,
+  COALESCE(co.delivered_orders, 0) AS delivered_orders,
+  COALESCE(co.total_spend, 0) AS total_spend,
+  co.first_order_date,
+  co.last_order_date,
+  CASE WHEN COALESCE(co.delivered_orders, 0) >= 2 THEN TRUE ELSE FALSE END AS is_repeat_customer
+FROM ${ref("dim_customers")} c
+LEFT JOIN customer_orders co ON c.customer_id = co.customer_id

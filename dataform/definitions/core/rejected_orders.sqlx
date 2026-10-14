@@ -1,0 +1,22 @@
+config {
+  type: "incremental",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "rejected_orders",
+  uniqueKey: ["order_id"]
+}
+
+SELECT
+  o.order_id,
+  o.customer_id,
+  o.restaurant_id,
+  o.order_ts,
+  o.updated_at,
+  CASE
+    WHEN o.customer_id IS NULL AND r.restaurant_id IS NULL THEN 'MISSING_CUSTOMER_AND_UNKNOWN_RESTAURANT'
+    WHEN o.customer_id IS NULL THEN 'MISSING_CUSTOMER_ID'
+    WHEN r.restaurant_id IS NULL THEN 'UNKNOWN_RESTAURANT_ID'
+  END AS rejection_reason,
+  CURRENT_TIMESTAMP() AS rejected_at
+FROM ${ref("stg_orders")} o
+LEFT JOIN ${ref("dim_restaurants")} r ON o.restaurant_id = r.restaurant_id
+WHERE o.customer_id IS NULL OR r.restaurant_id IS NULL

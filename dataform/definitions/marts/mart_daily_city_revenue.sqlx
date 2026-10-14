@@ -1,0 +1,25 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.marts_dataset,
+  name: "mart_daily_city_revenue"
+}
+
+WITH order_revenue AS (
+  SELECT
+    o.order_id,
+    o.order_date,
+    o.city,
+    SUM(i.line_item_revenue) AS gross_revenue
+  FROM ${ref("fct_orders")} o
+  JOIN ${ref("fct_order_items")} i ON o.order_id = i.order_id
+  WHERE o.status = 'delivered'
+  GROUP BY 1, 2, 3
+)
+
+SELECT
+  order_date,
+  city,
+  COUNT(order_id) AS delivered_orders,
+  COALESCE(SUM(gross_revenue), 0) AS gross_revenue
+FROM order_revenue
+GROUP BY 1, 2

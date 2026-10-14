@@ -1,0 +1,20 @@
+config {
+  type: "incremental",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "fct_order_items",
+  uniqueKey: ["order_id", "line_no"],
+  bigquery: {
+    clusterBy: ["order_id"]
+  }
+}
+
+SELECT
+  order_id,
+  line_no,
+  item_name,
+  quantity,
+  unit_price,
+  (quantity * unit_price) AS line_item_revenue
+FROM \${ref("stg_order_items")}
+
+\${when(incremental(), `WHERE order_id NOT IN (SELECT DISTINCT order_id FROM ${self()})`)}

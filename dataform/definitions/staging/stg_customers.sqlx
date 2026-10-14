@@ -1,0 +1,16 @@
+config {
+  type: "view",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "stg_customers"
+}
+
+SELECT
+  TRIM(CAST(customer_id AS STRING)) AS customer_id,
+  TRIM(CAST(name AS STRING)) AS customer_name,
+  TRIM(CAST(email AS STRING)) AS email,
+  TRIM(CAST(phone AS STRING)) AS phone,
+  TRIM(CAST(city AS STRING)) AS city,
+  CAST(signup_date AS DATE) AS signup_date,
+  CAST(updated_at AS TIMESTAMP) AS updated_at,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
+FROM ${ref(dataform.projectConfig.vars.raw_dataset, "customers")}

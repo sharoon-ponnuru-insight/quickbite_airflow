@@ -1,0 +1,36 @@
+config {
+  type: "incremental",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "dim_customers",
+  uniqueKey: ["customer_id"],
+  assertions: {
+    uniqueKey: ["customer_id"],
+    nonNull: ["customer_id"]
+  }
+}
+
+WITH ranked_customers AS (
+  SELECT
+    customer_id,
+    customer_name,
+    email,
+    phone,
+    city AS current_city,
+    signup_date,
+    updated_at,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY updated_at DESC, _ingested_at DESC) AS rn
+  FROM \${ref("stg_customers")}
+)
+
+SELECT
+  customer_id,
+  customer_name,
+  email,
+  phone,
+  current_city,
+  signup_date,
+  updated_at
+FROM ranked_customers
+WHERE rn = 1
+
+\${when(incremental(), `AND updated_at > (SELECT MAX(updated_at) FROM ${self()})`)}

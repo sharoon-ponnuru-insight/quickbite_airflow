@@ -1,0 +1,17 @@
+config {
+  type: "view",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "stg_orders"
+}
+
+SELECT
+  TRIM(CAST(order_id AS STRING)) AS order_id,
+  TRIM(CAST(customer_id AS STRING)) AS customer_id,
+  TRIM(CAST(restaurant_id AS STRING)) AS restaurant_id,
+  CAST(order_ts AS TIMESTAMP) AS order_ts,
+  DATE(CAST(order_ts AS TIMESTAMP)) AS order_date,
+  LOWER(TRIM(CAST(status AS STRING))) AS status,
+  COALESCE(NULLIF(LOWER(TRIM(CAST(payment_method AS STRING))), ''), 'unknown') AS payment_method,
+  CAST(updated_at AS TIMESTAMP) AS updated_at,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
+FROM ${ref(dataform.projectConfig.vars.raw_dataset, "orders")}

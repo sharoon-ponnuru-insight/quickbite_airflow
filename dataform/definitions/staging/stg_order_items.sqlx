@@ -1,0 +1,16 @@
+config {
+  type: "view",
+  schema: dataform.projectConfig.vars.core_dataset,
+  name: "stg_order_items"
+}
+
+SELECT
+  TRIM(CAST(order_id AS STRING)) AS order_id,
+  CAST(line_no AS INT64) AS line_no,
+  TRIM(CAST(item_name AS STRING)) AS item_name,
+  CAST(quantity AS INT64) AS quantity,
+  CAST(unit_price AS NUMERIC) AS unit_price,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
+FROM ${ref(dataform.projectConfig.vars.raw_dataset, "order_items")}
+WHERE CAST(quantity AS INT64) > 0 
+  AND CAST(unit_price AS NUMERIC) > 0

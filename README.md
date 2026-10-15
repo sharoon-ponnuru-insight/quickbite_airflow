@@ -7,36 +7,71 @@ An end-to-end, automated, and idempotent data engineering platform built for **Q
 ## 1. System Architecture & Data Flow
 
 ```
-[1. INPUT]
-Google Drive Folder (Daily CSV Exports: restaurants, customers, orders, order_items)
-       │
-       ▼
-[2. INGESTION & ORCHESTRATION - Cloud Composer / Airflow (us-central1)]
-  ├── GoogleDriveFileExistenceSensor (Waits for daily CSVs)
-  ├── GoogleDriveToGCSOperator (Extracts to gs://<bucket>/capstone/sharon/landing/YYYY-MM-DD/)
-  ├── GCSToBigQueryOperator (Loads raw strings into temporary tables: `sharon_raw._tmp_*`)
-  └── BigQueryInsertJobOperator (Idempotently merges records into `sharon_raw.raw_*` with audit metadata)
-       │
-       ▼
-[3. TRANSFORMATION - GCP Dataform Workspace Mode (us-central1)]
-  ├── BRONZE LAYER : `sharon_raw` (Partitioned raw tables + `_source_date`, `_source_file`, `_ingested_at`)
-  ├── SILVER LAYER : `sharon_core`
-  │     ├── Staging Views (`stg_*`: TRIM, type-casting, string lowercasing, line item filtering)
-  │     ├── Core Dimensions (`dim_restaurants`, `dim_customers`)
-  │     ├── Partitioned/Clustered Facts (`fct_orders`, `fct_order_items`)
-  │     └── Quarantine Table (`rejected_orders`: Unmapped restaurant IDs / Missing customer IDs)
-  └── GOLD LAYER   : `sharon_marts`
-        ├── `mart_daily_city_revenue` (Revenue per city per day on delivered orders)
-        ├── `mart_restaurant_performance` (Delivered vs cancelled orders & cancellation rates)
-        └── `mart_customer_summary` (Repeat customer metrics & lifetime spend)
-       │
-       ▼
-[4. ARCHIVING & OUTPUT]
-  ├── GCSToGCSOperator (Moves landing files to gs://<bucket>/capstone/sharon/archive/YYYY-MM-DD/)
-  └── BigQuery Analytics / Looker Studio (Executive Reporting)
-```
+graph LR
+    subgraph INPUT ["1. INPUT LAYER"]
+        GDrive["Google Drive<br/>(Daily CSV Exports)"]
+    end
 
----
+    subgraph ORCHESTRATION ["2. ORCHESTRATION & INGESTION (Cloud Composer / Airflow - us-central1)"]
+        Sensor["GoogleDriveFileExistenceSensor<br/>(Check File Presence)"]
+        GCS_Op["GoogleDriveToGCSOperator<br/>(Extract to Landing)"]
+        BQ_Temp["GCSToBigQueryOperator<br/>(Load to Temp Tables)"]
+        BQ_Merge["BigQueryInsertJobOperator<br/>(Merge & Add Audit Fields)"]
+    end
+
+    subgraph TRANSFORMATION ["3. TRANSFORMATION LAYER (GCP Dataform - us-central1)"]
+        subgraph BRONZE ["Bronze Layer"]
+            Raw_Tables[("sharon_raw<br/>raw_restaurants<br/>raw_customers<br/>raw_orders<br/>raw_order_items")]
+        end
+
+        subgraph SILVER ["Silver Layer"]
+            Staging["Staging Views<br/>(stg_*)"]
+            Core_Dims["Core Dimensions<br/>(dim_restaurants, dim_customers)"]
+            Core_Facts["Core Facts<br/>(fct_orders, fct_order_items)"]
+            Quarantine[("rejected_orders<br/>(Quarantine Table)")]
+        end
+
+        subgraph GOLD ["Gold Layer"]
+            Marts[("sharon_marts<br/>mart_daily_city_revenue<br/>mart_restaurant_performance<br/>mart_customer_summary")]
+        end
+    end
+
+    subgraph ARCHIVING ["4. ARCHIVING & OUTPUT"]
+        GCS_Landing["GCS Landing Bucket<br/>(capstone/sharon/landing/)"]
+        GCS_Archive["GCSToGCSOperator<br/>(capstone/sharon/archive/)"]
+        Looker["Analytics / BigQuery Console<br/>(Executive Reporting)"]
+    end
+
+    %% Relationships & Flow
+    GDrive --> Sensor
+    Sensor --> GCS_Op
+    GCS_Op --> GCS_Landing
+    GCS_Landing --> BQ_Temp
+    BQ_Temp --> BQ_Merge
+    BQ_Merge --> Raw_Tables
+    
+    Raw_Tables --> Staging
+    Staging --> Core_Dims
+    Staging --> Core_Facts
+    Staging --> Quarantine
+    
+    Core_Dims --> Marts
+    Core_Facts --> Marts
+    
+    Marts --> Looker
+    Marts --> GCS_Archive
+    GCS_Landing -. Move Files .-> GCS_Archive
+
+    %% Styling with explicit black text font
+    classDef inputStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000000;
+    classDef airflowStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000000;
+    classDef bqStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000000;
+    classDef martStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000000;
+
+    class GDrive inputStyle;
+    class Sensor,GCS_Op,BQ_Temp,BQ_Merge airflowStyle;
+    class Raw_Tables,Staging,Core_Dims,Core_Facts,Quarantine bqStyle;
+    class Marts,Looker,GCS_Landing,GCS_Archive martStyle;
 
 ## 2. Workspace Mode Setup (Git-Less Execution)
 

@@ -1,0 +1,8 @@
+defaultProject: "sada-seed-2025-sandbox"
+defaultDataset: "sharon_core"
+defaultLocation: "us-central1"
+dataformCoreVersion: "3.0.52"
+vars:
+  raw_dataset: "sharon_raw"
+  core_dataset: "sharon_core"
+  marts_dataset: "sharon_marts"

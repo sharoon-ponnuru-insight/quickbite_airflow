@@ -6,12 +6,18 @@ config {
 
 SELECT
   TRIM(CAST(order_id AS STRING)) AS order_id,
-  TRIM(CAST(customer_id AS STRING)) AS customer_id,
-  TRIM(CAST(restaurant_id AS STRING)) AS restaurant_id,
-  CAST(order_ts AS TIMESTAMP) AS order_ts,
-  DATE(CAST(order_ts AS TIMESTAMP)) AS order_date,
+  NULLIF(TRIM(CAST(customer_id AS STRING)), '') AS customer_id,
+  NULLIF(TRIM(CAST(restaurant_id AS STRING)), '') AS restaurant_id,
+  SAFE_CAST(order_ts AS TIMESTAMP) AS order_ts,
+  DATE(SAFE_CAST(order_ts AS TIMESTAMP)) AS order_date,
   LOWER(TRIM(CAST(status AS STRING))) AS status,
-  COALESCE(NULLIF(LOWER(TRIM(CAST(payment_method AS STRING))), ''), 'unknown') AS payment_method,
-  CAST(updated_at AS TIMESTAMP) AS updated_at,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
-FROM ${ref(dataform.projectConfig.vars.raw_dataset, "orders")}
+  CASE 
+    WHEN LOWER(TRIM(CAST(payment_method AS STRING))) IN ('card', 'upi', 'cash', 'net_banking', 'wallet') 
+      THEN LOWER(TRIM(CAST(payment_method AS STRING)))
+    ELSE 'unknown'
+  END AS payment_method,
+  SAFE_CAST(updated_at AS TIMESTAMP) AS updated_at,
+  COALESCE(SAFE_CAST(_ingested_at AS TIMESTAMP), CURRENT_TIMESTAMP()) AS _ingested_at
+FROM ${ref("sharon_raw", "raw_orders")}
+WHERE order_id IS NOT NULL 
+  AND TRIM(CAST(order_id AS STRING)) != ''

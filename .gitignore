@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files and credentials (NEVER commit secrets or service account keys)
+.env
+.venv
+env/
+venv/
+ENV/
+*.json
+*.pem
+*.key
+
+# Dataform temporary build and compilation artifacts
+.dataform/
+node_modules/
+package-lock.json
+
+# Local IDE and OS metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Airflow local logs and temp databases
+airflow-logs/
+airflow-webserver-*
+*.log
+*.sqlite
+*.db
+
+# Data files
+*.csv
+*.xlsx

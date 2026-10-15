@@ -15,6 +15,6 @@ SELECT
   quantity,
   unit_price,
   (quantity * unit_price) AS line_item_revenue
-FROM \${ref("stg_order_items")}
+FROM ${ref("stg_order_items")}
 
-\${when(incremental(), `WHERE order_id NOT IN (SELECT DISTINCT order_id FROM ${self()})`)}
+${when(incremental(), `WHERE order_id NOT IN (SELECT DISTINCT order_id FROM ${self()})`)}

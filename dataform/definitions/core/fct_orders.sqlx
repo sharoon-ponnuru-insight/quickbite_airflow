@@ -21,16 +21,21 @@ WITH valid_orders AS (
     r.city,
     o.order_ts,
     o.order_date,
-    CASE 
+    CASE
       WHEN o.status IN ('placed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled') THEN o.status
       ELSE 'unknown'
     END AS status,
     o.payment_method,
     o.updated_at,
     ROW_NUMBER() OVER (PARTITION BY o.order_id ORDER BY o.updated_at DESC, o._ingested_at DESC) AS rn
-  FROM \${ref("stg_orders")} o
-  INNER JOIN \${ref("dim_restaurants")} r ON o.restaurant_id = r.restaurant_id
-  WHERE o.customer_id IS NOT NULL
+  FROM
+    ${ref("stg_orders")} o
+  INNER JOIN
+    ${ref("dim_restaurants")} r
+  ON
+    o.restaurant_id = r.restaurant_id
+  WHERE
+    o.customer_id IS NOT NULL
 )
 
 SELECT
@@ -43,7 +48,8 @@ SELECT
   status,
   payment_method,
   updated_at
-FROM valid_orders
-WHERE rn = 1
-
-\${when(incremental(), `AND updated_at > (SELECT MAX(updated_at) FROM ${self()})`)}
+FROM
+  valid_orders
+WHERE
+  rn = 1
+  ${when(incremental(), `AND updated_at > (SELECT MAX(updated_at) FROM ${self()})`)}

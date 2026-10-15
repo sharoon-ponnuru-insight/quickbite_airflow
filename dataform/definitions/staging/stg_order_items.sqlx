@@ -1,16 +1,23 @@
 config {
   type: "view",
   schema: dataform.projectConfig.vars.core_dataset,
-  name: "stg_order_items"
+  name: "stg_orders"
 }
 
 SELECT
   TRIM(CAST(order_id AS STRING)) AS order_id,
-  CAST(line_no AS INT64) AS line_no,
-  TRIM(CAST(item_name AS STRING)) AS item_name,
-  CAST(quantity AS INT64) AS quantity,
-  CAST(unit_price AS NUMERIC) AS unit_price,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
-FROM ${ref(dataform.projectConfig.vars.raw_dataset, "order_items")}
-WHERE CAST(quantity AS INT64) > 0 
-  AND CAST(unit_price AS NUMERIC) > 0
+  NULLIF(TRIM(CAST(customer_id AS STRING)), '') AS customer_id,
+  NULLIF(TRIM(CAST(restaurant_id AS STRING)), '') AS restaurant_id,
+  SAFE_CAST(order_ts AS TIMESTAMP) AS order_ts,
+  DATE(SAFE_CAST(order_ts AS TIMESTAMP)) AS order_date,
+  LOWER(TRIM(CAST(status AS STRING))) AS status,
+  CASE 
+    WHEN LOWER(TRIM(CAST(payment_method AS STRING))) IN ('card', 'upi', 'cash', 'net_banking', 'wallet') 
+      THEN LOWER(TRIM(CAST(payment_method AS STRING)))
+    ELSE 'unknown'
+  END AS payment_method,
+  SAFE_CAST(updated_at AS TIMESTAMP) AS updated_at,
+  COALESCE(SAFE_CAST(_ingested_at AS TIMESTAMP), CURRENT_TIMESTAMP()) AS _ingested_at
+FROM ${ref("sharon_raw", "raw_orders")}
+WHERE order_id IS NOT NULL 
+  AND TRIM(CAST(order_id AS STRING)) != ''

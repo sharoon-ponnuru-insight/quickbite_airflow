@@ -1,8 +1,7 @@
 const raw_dataset = dataform.projectConfig.vars.raw_dataset;
 
-["restaurants", "customers", "orders", "order_items"].forEach((table) => {
+["raw_restaurants", "raw_customers", "raw_orders", "raw_order_items"].forEach((table) => {
   declare({
-    database: dataform.projectConfig.defaultProject,
     schema: raw_dataset,
     name: table,
   });

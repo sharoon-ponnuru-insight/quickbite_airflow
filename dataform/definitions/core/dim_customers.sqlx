@@ -19,7 +19,7 @@ WITH ranked_customers AS (
     signup_date,
     updated_at,
     ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY updated_at DESC, _ingested_at DESC) AS rn
-  FROM \${ref("stg_customers")}
+  FROM ${ref("stg_customers")}
 )
 
 SELECT
@@ -33,4 +33,4 @@ SELECT
 FROM ranked_customers
 WHERE rn = 1
 
-\${when(incremental(), `AND updated_at > (SELECT MAX(updated_at) FROM ${self()})`)}
+${when(incremental(), `AND updated_at > (SELECT MAX(updated_at) FROM ${self()})`)}

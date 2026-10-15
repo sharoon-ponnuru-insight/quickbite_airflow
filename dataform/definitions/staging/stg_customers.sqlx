@@ -4,13 +4,32 @@ config {
   name: "stg_customers"
 }
 
+WITH cleaned_customers AS (
+  SELECT
+    TRIM(CAST(customer_id AS STRING)) AS customer_id,
+    INITCAP(TRIM(CAST(name AS STRING))) AS customer_name,
+    LOWER(TRIM(CAST(email AS STRING))) AS raw_email,
+    REGEXP_REPLACE(CAST(phone AS STRING), r'[^0-9]', '') AS clean_phone,
+    INITCAP(TRIM(CAST(city AS STRING))) AS city,
+    SAFE_CAST(signup_date AS DATE) AS signup_date,
+    SAFE_CAST(updated_at AS TIMESTAMP) AS updated_at,
+    COALESCE(SAFE_CAST(_ingested_at AS TIMESTAMP), CURRENT_TIMESTAMP()) AS _ingested_at
+  FROM ${ref("sharon_raw", "raw_customers")}
+)
+
 SELECT
-  TRIM(CAST(customer_id AS STRING)) AS customer_id,
-  TRIM(CAST(name AS STRING)) AS customer_name,
-  TRIM(CAST(email AS STRING)) AS email,
-  TRIM(CAST(phone AS STRING)) AS phone,
-  TRIM(CAST(city AS STRING)) AS city,
-  CAST(signup_date AS DATE) AS signup_date,
-  CAST(updated_at AS TIMESTAMP) AS updated_at,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at
-FROM ${ref(dataform.projectConfig.vars.raw_dataset, "customers")}
+  customer_id,
+  customer_name,
+  IF(
+    REGEXP_CONTAINS(raw_email, r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+    raw_email,
+    NULL
+  ) AS email,
+  IF(LENGTH(clean_phone) >= 10, clean_phone, NULL) AS phone,
+  city,
+  IF(signup_date <= CURRENT_DATE(), signup_date, NULL) AS signup_date,
+  updated_at,
+  _ingested_at
+FROM cleaned_customers
+WHERE customer_id IS NOT NULL 
+  AND customer_id != ''
